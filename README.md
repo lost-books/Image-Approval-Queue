@@ -19,7 +19,9 @@ Or, for existing images:
 
 > Open a review queue for the images in this folder.
 
-Codex should find the images and set up the queue. There is no need to prepare a list of filenames. After a new image round, ask Codex to add it to the same queue. Earlier choices should remain.
+Codex should find the images and set up the queue. There is no need to prepare a list of filenames. After a new image round, ask Codex to add it to the same queue. Earlier choices should remain. 
+
+If Codex asks where the skill is, specify the repository root—the folder containing SKILL.md.
 
 Approve and Reject record a rating. Clear removes that rating. The extra Promote button is independent, so an image can be promoted while still unrated. For book covers or another specific purpose, the button can have a more useful name such as “Mark as cover.”
 
