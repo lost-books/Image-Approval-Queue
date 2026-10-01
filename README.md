@@ -6,7 +6,6 @@ Other AI systems may adapt the [skill instructions](SKILL.md) to their own local
 
 ## Example Screenshots
 
-![Image approval queue in the Codex side panel](queue_sidebar_01.jpg)
 ![Image approval queue in the Codex side panel](queue_sidebar_02.jpg)
 
 ## For people
