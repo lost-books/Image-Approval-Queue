@@ -34,3 +34,7 @@ The ready-made app runs locally with Python 3.9+ on macOS or Linux and needs no 
 ## Future extension
 
 Per-image regeneration with written steering is planned but not implemented. A future Regenerate action should preserve the original and add the result as a new variant with its own review choices.
+
+## Disclaimer
+
+All of the above text and code included in this repo were written by ChatGPT Work and no human has reviewed any of the included code. Use at your own risk and use your best judgement.
