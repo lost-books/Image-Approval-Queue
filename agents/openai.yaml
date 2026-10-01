@@ -1,0 +1,4 @@
+interface:
+  display_name: "Image Approval Queue"
+  short_description: "Review image rounds and preserve each choice"
+  default_prompt: "Use $image-approval-queue to add an approval queue to these images and open it for review."

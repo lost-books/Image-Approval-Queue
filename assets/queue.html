@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Image approval queue</title>
+<style>
+:root{color-scheme:dark;font:15px system-ui;background:#15191d;color:#f0f2f4}
+*{box-sizing:border-box}
+body{margin:0 auto;padding:16px;max-width:850px}
+h1{font-size:22px;margin:8px 0}
+header{position:sticky;top:0;background:#15191df5;padding:4px 0 12px;z-index:1}
+p{line-height:1.5}
+select,button{font:inherit;border:1px solid #778692;border-radius:7px;padding:10px;background:#26313a;color:inherit;cursor:pointer}
+select{max-width:100%}
+.filters,.actions{display:flex;flex-wrap:wrap;gap:8px}
+article{margin:16px 0 24px;padding:14px;background:#20272d;border:1px solid #4e606d;border-radius:10px;overflow-wrap:anywhere}
+h2{font-size:18px;margin:0 0 6px}
+.meta{color:#bdc8d0;font-size:13px}
+.preview{display:block;width:100%;max-height:60vh;object-fit:contain;margin:12px 0;background:#101417}
+.actions button{flex:1;min-width:75px}
+.actions button[data-field=promoted]{flex-basis:100%}
+button[aria-pressed=true]{outline:2px solid #c4e3ff;background:#34546a}
+button[data-value=approved][aria-pressed=true]{background:#245a3d}
+button[data-value=rejected][aria-pressed=true]{background:#7b303b}
+button:disabled{opacity:.5;cursor:wait}
+button:focus-visible,a:focus-visible,select:focus-visible{outline:3px solid #ffd58b;outline-offset:3px}
+.promotion{color:#e5ccff}
+.error{color:#ffafb6}
+#notice{min-height:23px}
+a{color:#9cd3ff}
+summary{cursor:pointer}
+details{margin-top:12px}
+li{margin:8px 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>Image approval queue</h1>
+  <p id="counts"></p>
+  <div class="filters">
+    <select id="round" aria-label="Round"><option value="">All rounds</option></select>
+    <select id="filter" aria-label="Decision filter">
+      <option value="all">All images</option>
+      <option value="pending">Unrated</option>
+      <option value="approved">Approved</option>
+      <option value="rejected">Rejected</option>
+      <option value="promoted">Promoted</option>
+    </select>
+    <button id="refresh">Refresh</button>
+  </div>
+  <div id="notice" role="status" aria-live="polite"></div>
+</header>
+<main id="cards"></main>
+<script>
+let data;
+const $ = id => document.getElementById(id);
+const ratings = {pending:'Unrated',approved:'Approved',rejected:'Rejected'};
+function node(tag, value, className) {
+  const element = document.createElement(tag);
+  if (value !== undefined) element.textContent = value;
+  if (className) element.className = className;
+  return element;
+}
+function decision(id) {
+  return {status:'pending',promoted:false,...data.decisions[id]};
+}
+function counts() {
+  const entries = data.images.map(image => decision(image.id));
+  $('counts').textContent = `${entries.filter(d => d.status === 'pending').length} unrated · ${entries.filter(d => d.status === 'approved').length} approved · ${entries.filter(d => d.status === 'rejected').length} rejected · ${entries.filter(d => d.promoted).length} promoted`;
+}
+function card(image) {
+  const current = decision(image.id);
+  const article = node('article');
+  article.dataset.id = image.id;
+  article.append(node('h2',image.name || image.id));
+  const description = [image.id, 'Round ' + (image.round ?? 'unspecified')];
+  if (image.variant) description.push('Variant ' + image.variant);
+  if (image.variant_of) description.push('Based on ' + image.variant_of);
+  article.append(node('div',description.join(' · '),'meta'));
+  const link = node('a');
+  link.href = '/image/' + encodeURIComponent(image.id);
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.setAttribute('aria-label','Open full image: ' + (image.name || image.id));
+  const preview = node('img',undefined,'preview');
+  preview.src = link.href;
+  preview.alt = image.name || image.id;
+  preview.loading = 'lazy';
+  preview.onerror = () => link.replaceWith(node('p','Image unavailable. Check its source file.','error'));
+  link.append(preview);
+  article.append(link,node('p',ratings[current.status],'status'),node('p',current.promoted ? 'Promoted' : 'Not promoted','promotion'));
+  const actions = node('div',undefined,'actions');
+  const choices = [
+    ['Approve','status','approved'],
+    ['Reject','status','rejected'],
+    ['Clear','status','pending'],
+    [current.promoted ? 'Remove promotion' : data.promotion_label,'promoted',!current.promoted]
+  ];
+  for (const [label,field,value] of choices) {
+    const button = node('button',label);
+    button.dataset.field = field;
+    button.dataset.value = String(value);
+    button.setAttribute('aria-pressed',String(field === 'status' ? current.status === value : current.promoted));
+    button.onclick = () => save(image,field,value,article);
+    actions.append(button);
+  }
+  article.append(actions);
+  const history = node('details');
+  history.append(node('summary',`Decision history (${(current.history || []).length})`));
+  const list = node('ol');
+  for (const event of [...(current.history || [])].reverse()) {
+    const field = event.field === 'marked_cover' ? 'promoted (earlier cover mark)' : event.field;
+    list.append(node('li',`${event.at}: ${field ? field + ' = ' + event.value : JSON.stringify(event)}`));
+  }
+  history.append(list);
+  article.append(history);
+  return article;
+}
+function render() {
+  counts();
+  $('cards').replaceChildren();
+  for (const image of data.images) {
+    const current = decision(image.id);
+    if ($('round').value && String(image.round ?? 'unspecified') !== $('round').value) continue;
+    const filter = $('filter').value;
+    if (filter === 'promoted' ? !current.promoted : filter !== 'all' && current.status !== filter) continue;
+    $('cards').append(card(image));
+  }
+  if (!$('cards').children.length) $('cards').append(node('p','No images match these filters.'));
+}
+async function load() {
+  try {
+    const response = await fetch('/api/queue');
+    const result = await response.json();
+    if (!response.ok) throw Error(result.error);
+    data = result;
+    const selectedRound = $('round').value;
+    $('round').replaceChildren(new Option('All rounds',''));
+    for (const round of [...new Set(data.images.map(image => String(image.round ?? 'unspecified')))]) {
+      $('round').add(new Option('Round ' + round,round));
+    }
+    $('round').value = selectedRound;
+    if ($('round').selectedIndex < 0) $('round').value = '';
+    render();
+    $('notice').textContent = 'Ready. Every choice saves immediately.';
+    $('notice').className = '';
+  } catch (error) {
+    $('notice').textContent = 'Unable to load: ' + error.message;
+    $('notice').className = 'error';
+  }
+}
+async function save(image,field,value,article) {
+  article.querySelectorAll('button').forEach(button => button.disabled = true);
+  $('notice').textContent = 'Saving…';
+  try {
+    const response = await fetch('/api/decision',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Queue-Token':data.token},
+      body:JSON.stringify({id:image.id,[field]:value})
+    });
+    const result = await response.json();
+    if (!response.ok) throw Error(result.error);
+    data.decisions[image.id] = result;
+    article.replaceWith(card(image));
+    counts();
+    $('notice').textContent = 'Saved · ' + image.id;
+    $('notice').className = '';
+  } catch (error) {
+    $('notice').textContent = 'Not saved: ' + error.message;
+    $('notice').className = 'error';
+    article.querySelectorAll('button').forEach(button => button.disabled = false);
+  }
+}
+$('round').onchange = render;
+$('filter').onchange = render;
+$('refresh').onclick = load;
+load();
+</script>
+</body>
+</html>
