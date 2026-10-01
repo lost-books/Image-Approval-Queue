@@ -8,8 +8,6 @@ Other AI systems may adapt the [skill instructions](SKILL.md) to their own local
 
 ![Image approval queue in the Codex side panel](queue_sidebar_02.jpg)
 
-[You can always change how it looks.]
-
 ## For people
 
 In Codex, provide this repository URL and ask it to install the skill. Then ask something natural, such as:
