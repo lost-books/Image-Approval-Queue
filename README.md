@@ -4,6 +4,11 @@ This skill adds a local review panel to image work in Work/Codex. A person can l
 
 Other AI systems may adapt the [skill instructions](SKILL.md) to their own local tools. The included Python app is one ready-made implementation; the skill also describes how to build an equivalent queue when that app is unsuitable.
 
+## Example Screenshots
+
+![Image approval queue in the Codex side panel](queue_sidebar_01.jpg)
+![Image approval queue in the Codex side panel](queue_sidebar_02.jpg)
+
 ## For people
 
 In Codex, provide this repository URL and ask it to install the skill. Then ask something natural, such as:
